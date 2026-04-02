@@ -19,7 +19,7 @@ struct Database {
     }
 
     // MARK: Properties
-    static var standard: ScreenSaverDefaults {
+    static let standard: ScreenSaverDefaults = {
         guard let bundleIdentifier = Bundle(for: BrooklynManager.self).bundleIdentifier,
             let database = ScreenSaverDefaults(forModuleWithName: bundleIdentifier)
             else { fatalError("Failed to retrieve database") }
@@ -32,7 +32,7 @@ struct Database {
         )
 
         return database
-    }
+    }()
 }
 
 // MARK: - ScreenSaverDefaults's Functions
@@ -70,6 +70,5 @@ private extension ScreenSaverDefaults {
     
     func set(_ object: Any, for key: String) {
         set(object, forKey: key)
-        synchronize()
     }
 }

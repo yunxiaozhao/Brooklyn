@@ -19,8 +19,10 @@ final class LoopPlayer: AVQueuePlayer {
                 $0.append(contentsOf: Array(copy: item, count: numberOfLoops))
             }
             .prepareForQueue()
-        
+
         super.init(items: items)
+        isMuted = true
+        volume = 0
         observe()
     }
     

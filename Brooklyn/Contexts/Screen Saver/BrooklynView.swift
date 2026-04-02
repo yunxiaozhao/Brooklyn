@@ -13,89 +13,103 @@ import AVKit
 // MARK: - BrooklynView
 final class BrooklynView: ScreenSaverView {
 
-    // MARK: Local Typealias
-    typealias Static = BrooklynView
-    
     // MARK: Constant
     private enum Constant {
-        static let secondPerFrame = 1.0 / 30.0
-        static let backgroundColor = NSColor(red: 0.00, green: 0.01, blue: 0.00, alpha:1.0)
+        static let backgroundColor = NSColor(red: 0.00, green: 0.01, blue: 0.00, alpha: 1.0)
     }
-    
-    // MARK: Outlets
-    private let videoLayer = AVPlayerLayer()
-    
+
     // MARK: Properties
-    private let manager = BrooklynManager(mode: .screensaver)
-    private lazy var preferences = PreferencesWindowController(windowNibName: PreferencesWindowController.identifier)
+    private var videoLayer: AVPlayerLayer?
+    private var manager: BrooklynManager?
+    private lazy var preferences: PreferencesWindowController = {
+        let bundle = Bundle(for: BrooklynView.self)
+        let nibName = PreferencesWindowController.identifier
+        let controller = PreferencesWindowController(windowNibName: nibName)
+
+        let nib = NSNib(nibNamed: nibName, bundle: bundle)!
+        var topLevelObjects: NSArray?
+        nib.instantiate(withOwner: controller, topLevelObjects: &topLevelObjects)
+        if let objects = topLevelObjects {
+            for obj in objects {
+                if let window = obj as? NSWindow {
+                    controller.window = window
+                    window.delegate = controller
+                    break
+                }
+            }
+        }
+        return controller
+    }()
 
     // MARK: Initialization
     required init?(coder decoder: NSCoder) {
         super.init(coder: decoder)
-        animationTimeInterval = Constant.secondPerFrame
         configure()
     }
-    
+
     override init?(frame: NSRect, isPreview: Bool) {
         super.init(frame: frame, isPreview: isPreview)
-        animationTimeInterval = Constant.secondPerFrame
         configure()
     }
-}
 
-// MARK: - Lifecycle
-extension BrooklynView {
-    
+    // MARK: ScreenSaverView overrides
     override func startAnimation() {
         super.startAnimation()
-        manager.player.play()
+        manager?.player.play()
     }
-    
+
     override func stopAnimation() {
         super.stopAnimation()
-        manager.player.pause()
+        manager?.player.pause()
     }
-}
 
-// MARK: - Configuration
-private extension BrooklynView {
-    
-    func configure() {
-        defineLayer()
-        setupLayer()
-    }
-    
-    func defineLayer() {
-        wantsLayer = true
-        defineVideoLayer()
-        layer = videoLayer
-    }
-    
-    func setupLayer() {
-        videoLayer.player = manager.player
-    }
-}
-
-// MARK: - Define Layers
-private extension BrooklynView {
-
-    func defineVideoLayer() {
+    override func layout() {
+        super.layout()
+        guard let videoLayer = videoLayer else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         videoLayer.frame = bounds
-        videoLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
-        videoLayer.needsDisplayOnBoundsChange = true
-        videoLayer.contentsGravity = .resizeAspect
-        videoLayer.backgroundColor = Constant.backgroundColor.cgColor
+        CATransaction.commit()
     }
-}
 
-// MARK: - Preferences
-extension BrooklynView {
-
+    // MARK: Preferences
     override var hasConfigureSheet: Bool {
         return true
     }
 
     override var configureSheet: NSWindow? {
         return preferences.window
+    }
+}
+
+// MARK: - Configuration
+private extension BrooklynView {
+
+    func configure() {
+        animationTimeInterval = 60.0
+        wantsLayer = true
+        layer?.backgroundColor = Constant.backgroundColor.cgColor
+
+        if isPreview {
+            let bundle = Bundle(for: BrooklynView.self)
+            if let image = bundle.image(forResource: "thumbnail") {
+                let imageLayer = CALayer()
+                imageLayer.contents = image
+                imageLayer.contentsGravity = .resizeAspect
+                imageLayer.frame = bounds
+                imageLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+                layer?.addSublayer(imageLayer)
+            }
+        } else {
+            manager = BrooklynManager(mode: .screensaver)
+
+            let vLayer = AVPlayerLayer()
+            vLayer.player = manager!.player
+            vLayer.videoGravity = .resizeAspect
+            vLayer.backgroundColor = Constant.backgroundColor.cgColor
+            vLayer.frame = bounds
+            layer?.addSublayer(vLayer)
+            videoLayer = vLayer
+        }
     }
 }
