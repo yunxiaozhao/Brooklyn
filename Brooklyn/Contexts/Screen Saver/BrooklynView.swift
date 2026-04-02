@@ -24,11 +24,14 @@ final class BrooklynView: ScreenSaverView {
     private lazy var preferences: PreferencesWindowController = {
         let bundle = Bundle(for: BrooklynView.self)
         let nibName = PreferencesWindowController.identifier
-        let controller = PreferencesWindowController(windowNibName: nibName)
+        let controller = PreferencesWindowController()
 
+        // Load NIB with controller as File's Owner — outlets connect to controller
         let nib = NSNib(nibNamed: nibName, bundle: bundle)!
         var topLevelObjects: NSArray?
         nib.instantiate(withOwner: controller, topLevelObjects: &topLevelObjects)
+
+        // Find the window from top-level objects and assign it
         if let objects = topLevelObjects {
             for obj in objects {
                 if let window = obj as? NSWindow {
@@ -38,6 +41,7 @@ final class BrooklynView: ScreenSaverView {
                 }
             }
         }
+        controller.configureIfNeeded()
         return controller
     }()
 

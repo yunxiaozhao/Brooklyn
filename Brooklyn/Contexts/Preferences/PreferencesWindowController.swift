@@ -28,14 +28,20 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     
     // MARK: Private Properties
     private let manager = BrooklynManager(mode: .preferences)
+    private var isConfigured = false
 }
 
 // MARK: - Lifecycle
 extension PreferencesWindowController {
-    
+
     override func windowDidLoad() {
         super.windowDidLoad()
-        configure()
+        configureIfNeeded()
+    }
+
+    override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
+        configureIfNeeded()
     }
     
     override func keyUp(with event: NSEvent) {
@@ -51,14 +57,19 @@ extension PreferencesWindowController {
 }
 
 // MARK: - Configuration
-private extension PreferencesWindowController {
-    
-    func configure() {
+extension PreferencesWindowController {
+
+    func configureIfNeeded() {
+        guard !isConfigured, animationsTableView != nil else { return }
+        isConfigured = true
         setupTableView()
         setupPlayer()
         setupLabels()
         setupButtons()
     }
+}
+
+private extension PreferencesWindowController {
     
     func setupTableView() {
         animationsTableView.dataSource = self
