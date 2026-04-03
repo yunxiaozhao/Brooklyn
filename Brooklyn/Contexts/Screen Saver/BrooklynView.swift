@@ -26,12 +26,10 @@ final class BrooklynView: ScreenSaverView {
         let nibName = PreferencesWindowController.identifier
         let controller = PreferencesWindowController()
 
-        // Load NIB with controller as File's Owner — outlets connect to controller
         let nib = NSNib(nibNamed: nibName, bundle: bundle)!
         var topLevelObjects: NSArray?
         nib.instantiate(withOwner: controller, topLevelObjects: &topLevelObjects)
 
-        // Find the window from top-level objects and assign it
         if let objects = topLevelObjects {
             for obj in objects {
                 if let window = obj as? NSWindow {
@@ -59,12 +57,48 @@ final class BrooklynView: ScreenSaverView {
     // MARK: ScreenSaverView overrides
     override func startAnimation() {
         super.startAnimation()
-        manager?.player.play()
+        if !isPreview {
+            if manager == nil {
+                manager = BrooklynManager(mode: .screensaver)
+                videoLayer?.player = manager!.player
+                // Listen for screen wake/unlock to tear down playback,
+                // since stopAnimation is not reliably called on modern macOS.
+                DistributedNotificationCenter.default().addObserver(self,
+                    selector: #selector(screenDidUnlock),
+                    name: NSNotification.Name("com.apple.screenIsUnlocked"),
+                    object: nil)
+                NotificationCenter.default.addObserver(self,
+                    selector: #selector(screenDidUnlock),
+                    name: NSWorkspace.screensDidWakeNotification,
+                    object: nil)
+            }
+            manager?.player.play()
+        }
     }
 
     override func stopAnimation() {
         super.stopAnimation()
+        tearDownPlayer()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            tearDownPlayer()
+        }
+    }
+
+    @objc private func screenDidUnlock() {
+        tearDownPlayer()
+    }
+
+    private func tearDownPlayer() {
         manager?.player.pause()
+        manager?.player.removeAllItems()
+        videoLayer?.player = nil
+        manager = nil
+        DistributedNotificationCenter.default().removeObserver(self)
+        NotificationCenter.default.removeObserver(self, name: NSWorkspace.screensDidWakeNotification, object: nil)
     }
 
     override func layout() {
@@ -105,10 +139,7 @@ private extension BrooklynView {
                 layer?.addSublayer(imageLayer)
             }
         } else {
-            manager = BrooklynManager(mode: .screensaver)
-
             let vLayer = AVPlayerLayer()
-            vLayer.player = manager!.player
             vLayer.videoGravity = .resizeAspect
             vLayer.backgroundColor = Constant.backgroundColor.cgColor
             vLayer.frame = bounds
