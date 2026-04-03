@@ -55,7 +55,7 @@ private extension LoopPlayer {
     
     func observe() {
         NotificationCenter.default.addObserver(self,
-                                               selector: #selector(playerItemDidFinish),
+                                               selector: #selector(playerItemDidFinish(_:)),
                                                name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
                                                object: nil)
     }
@@ -67,9 +67,15 @@ private extension LoopPlayer {
     }
     
     @objc
-    func playerItemDidFinish() {
-        guard let currentItemCopy = currentItem?.copy() as? AVPlayerItem else { return }
-        insert(currentItemCopy, after: items().last)
+    func playerItemDidFinish(_ notification: Notification) {
+        // Only handle our own player items
+        guard let finishedItem = notification.object as? AVPlayerItem,
+              items().contains(where: { $0 === finishedItem }) || currentItem === finishedItem else { return }
+        // Keep queue small: only add if running low
+        if items().count < 3 {
+            guard let copy = finishedItem.copy() as? AVPlayerItem else { return }
+            insert(copy, after: items().last)
+        }
     }
 }
 
